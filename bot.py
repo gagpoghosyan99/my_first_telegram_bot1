@@ -1,15 +1,15 @@
-from telegram import Update, InlineQueryResultArticle, InputTextMessageContent
+import os
+from dotenv import load_dotenv
+from telegram import Update, InlineQueryResultArticle, InputTextMessageContent 
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler, InlineQueryHandler,
-    ContextTypes, filters
+    ApplicationBuilder, CommandHandler, MessageHandler, InlineQueryHandler, ContextTypes, filters
 )
-import math
-import uuid
-import re
+import math, uuid, re
 
-TOKEN = '7618815581:AAFzwRwZnajzJNjT2KrNgoMcihlmkH3iRMY'
+# Load environment variables
+load_dotenv()
+TOKEN = os.getenv("BOT_TOKEN")
 
-# Helper to convert % to proper division
 def convert_percent(expr: str) -> str:
     tokens = re.findall(r'\d+\.?\d*%|[\d.]+|[+/*()-]', expr)
     output = []
@@ -20,20 +20,20 @@ def convert_percent(expr: str) -> str:
             number = float(token.replace('%', ''))
             try:
                 prev_expr = ''.join(eval_stack)
-                prev_value = eval(prev_expr, {"builtins": {}}, {})
+                prev_value = eval(prev_expr, {'builtins': {}}, {})
                 percent_value = f"({prev_value} * {number} / 100)"
                 output.append(percent_value)
                 eval_stack = [percent_value]
             except:
-                output.append(f"({number} / 100)")
-                eval_stack = [f"({number} / 100)"]
+                output.append(f'({number} / 100)')
+                eval_stack = [f'({number} / 100)']
         else:
             output.append(token)
             if token.strip() not in "+-*/()":
                 eval_stack.append(token)
-
     return ''.join(output)
-# Start command
+
+# Command: /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Ողջույն {update.effective_user.first_name}! Ես քո բոտն եմ 🤖")
     await update.message.reply_text("Պատրաստ եմ կատարել քեզ համար մաթեմատիկական գործողություններ։")
@@ -54,11 +54,10 @@ async def handle_math_expression(update: Update, context: ContextTypes.DEFAULT_T
     except Exception:
         await update.message.reply_text("Սխալ՝ անվավեր արտահայտություն։")
 
-# Inline query handler
+# Inline queries
 async def inline_query_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.inline_query.query.strip()
     query = convert_percent(query)
-
     results = []
 
     if re.fullmatch(r"[0-9+\-*/(). %]+", query):
@@ -90,13 +89,16 @@ async def inline_query_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
     await update.inline_query.answer(results, cache_time=0)
 
-# Run the bot
+# Main runner
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
 
-    app.add_handler(CommandHandler('start', start))
+    app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_math_expression))
     app.add_handler(InlineQueryHandler(inline_query_handler))
 
     print("🤖 Bot is running with inline support and percent handling...")
     app.run_polling()
+        
+    
+    
